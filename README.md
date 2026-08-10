@@ -27,6 +27,7 @@ The solution is built around four invariants, all enforced by the database (not 
 - [Core Flows](#core-flows)
 - [API Reference](#api-reference)
 - [Error Codes](#error-codes)
+- [Deploying the API to Vercel](#deploying-the-api-to-vercel)
 - [Concurrency & Correctness](#concurrency--correctness)
 - [Seed Data](#seed-data)
 - [Verification / Tests](#verification--tests)
@@ -491,7 +492,38 @@ Every error is returned as `{ "error": { "code", "message" } }` with an appropri
 
 ---
 
-## Concurrency & Correctness
+## Deploying the API to Vercel
+
+The API deploys as a single [Vercel Function](https://vercel.com/docs/functions) from a dedicated serverless entrypoint (`apps/api/api/index.ts`). The local `src/index.ts` (which calls `app.listen()`) is not used on Vercel.
+
+**Project root directory:** `apps/api` — so env vars are configured **per-project on Vercel**, completely separate from the root `.env` (docker compose) and `apps/api/.env` (local dev).
+
+1. **Import the repo** → New Project → set **Root Directory** to `apps/api` (Framework Preset: Other / Express).
+2. **Add the env var** in Project Settings → Environment Variables (or `vercel env add DATABASE_URL production`):
+
+   | Var | Value |
+   |---|---|
+   | `DATABASE_URL` | Neon **pooled** connection string, e.g. `postgres://<user>:<pass>@ep-<slug>-pooler.<region>.aws.neon.tech/ottodot?sslmode=require` |
+
+   `PORT` and `TEST_DATABASE_URL` are **not** needed on Vercel (see `apps/api/.env.production.example`).
+3. **Apply migrations to Neon** (from your machine or CI):
+
+   ```bash
+   DATABASE_URL="postgres://<user>:<pass>@ep-<slug>-pooler.<region>.aws.neon.tech/ottodot?sslmode=require" \
+     pnpm --filter @ottodot/api db:migrate
+   ```
+
+   Optionally seed the production DB the same way with `pnpm --filter @ottodot/api db:seed`.
+4. **Deploy** — then verify: `curl https://<project>.vercel.app/api/health` → `{ "ok": true }`.
+
+Notes:
+
+- On Vercel, the pool is configured serverless-safe (`max: 1` + timeouts) via `process.env.VERCEL`.
+- `dotenv/config` never overrides platform-injected vars, so it stays in the dev entrypoints.
+- If the Next.js web app is deployed later, set its `API_URL` to the deployed API URL (e.g. `https://<project>.vercel.app`) so the `/api/*` proxy keeps working. CORS is already wide open (`cors()`).
+- Migrations (`apps/api/drizzle/`) are not required at runtime; they are applied against the hosted DB before/after deploy as above.
+
+---
 
 ### How duplicates are prevented
 
