@@ -15,8 +15,21 @@ The solution is built around four invariants, all enforced by the database (not 
 
 ---
 
+## Live URLs
+
+Both apps are deployed to Vercel:
+
+| App | URL |
+|---|---|
+| Web (parent booking + teacher roster) | https://test-ottodot-web.vercel.app |
+| API | https://test-ottodot-api.vercel.app |
+| API health check | https://test-ottodot-api.vercel.app/api/health |
+
+---
+
 ## Table of Contents
 
+- [Live URLs](#live-urls)
 - [Quick Start](#quick-start)
 - [Environment variables](#environment-variables)
 - [Tests & checks](#tests--checks)
@@ -319,7 +332,7 @@ Key point: the gateway charge for user A can still *succeed* — but because the
 
 ## API Reference
 
-Base URL: `http://localhost:4000` (proxied through the web app at `/api/*`). All responses are JSON.
+Base URL: `https://test-ottodot-api.vercel.app` (production) or `http://localhost:4000` (local, proxied through the web app at `/api/*`). All responses are JSON.
 
 | Method | Endpoint | Purpose |
 |---|---|---|
@@ -519,13 +532,13 @@ The API deploys as a single [Vercel Function](https://vercel.com/docs/functions)
    ```
 
    Optionally seed the production DB the same way with `pnpm --filter @ottodot/api db:seed`.
-4. **Deploy** — then verify: `curl https://<project>.vercel.app/api/health` → `{ "ok": true }`.
+4. **Deploy** — then verify: `curl https://test-ottodot-api.vercel.app/api/health` → `{ "ok": true }`.
 
 Notes:
 
 - On Vercel, the pool is configured serverless-safe (`max: 1` + timeouts) via `process.env.VERCEL`.
 - `dotenv/config` never overrides platform-injected vars, so it stays in the dev entrypoints.
-- If the Next.js web app is deployed later, set its `API_URL` to the deployed API URL (e.g. `https://<project>.vercel.app`) so the `/api/*` proxy keeps working. CORS is already wide open (`cors()`).
+- The web app is already deployed at https://test-ottodot-web.vercel.app with its `API_URL` set to https://test-ottodot-api.vercel.app so the `/api/*` proxy keeps working. CORS is already wide open (`cors()`).
 - Migrations (`apps/api/drizzle/`) are not required at runtime; they are applied against the hosted DB before/after deploy as above.
 
 ---
