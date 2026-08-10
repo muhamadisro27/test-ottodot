@@ -276,12 +276,12 @@ sequenceDiagram
         API->>DB: booking set to payment_failed
         API-->>UI: { result: failure, bookingStatus: payment_failed }
     else success
-        API->>DB: BEGIN; conditional UPDATE trial_classes
-        API->>DB: increment confirmed_count only while below capacity
-        API->>DB: mark booking confirmed; COMMIT
+        API->>DB: begin transaction
+        API->>DB: conditional UPDATE: increment confirmed_count below capacity
+        API->>DB: mark booking confirmed, commit
         API-->>UI: { result: success, bookingStatus: confirmed }
     end
-    UI->>Parent: show status; roster now includes child
+    UI->>Parent: show status, roster now includes child
 ```
 
 ### Last-seat race — the core scenario
@@ -301,15 +301,16 @@ sequenceDiagram
     B->>API: create booking (pending_payment)
     Note over A,B: NO seat is reserved at selection time
     B->>API: pay (arrives first)
-    API->>DB: BEGIN; conditional UPDATE trial_classes
-    API->>DB: confirmed_count 3 to 4; confirm B; COMMIT
+    API->>DB: begin transaction
+    API->>DB: conditional UPDATE: confirmed_count 3 to 4
+    API->>DB: confirm B, commit
     API-->>B: { bookingStatus: "confirmed" }
     A->>API: pay (arrives second)
-    API->>DB: BEGIN; conditional UPDATE trial_classes
-    API->>DB: WHERE below capacity: matches 0 rows
+    API->>DB: begin transaction
+    API->>DB: conditional UPDATE: WHERE below capacity, matches 0 rows
     API->>DB: booking A set to payment_failed (reason seat_unavailable)
     API-->>A: { result: "success", reason: "seat_unavailable", bookingStatus: "payment_failed" }
-    Note over A,DB: PostgreSQL row-level lock serializes the two writers; the loser re-evaluates WHERE and loses: AT MOST ONE confirmed, guaranteed by the DB
+    Note over A,DB: PostgreSQL row-level lock serializes the two writers, the loser re-evaluates WHERE and loses: AT MOST ONE confirmed, guaranteed by the DB
 ```
 
 Key point: the gateway charge for user A can still *succeed* — but because the conditional UPDATE matched zero rows, the seat is **not** consumed and A's booking ends `payment_failed`. There is never a refund-or-reconcile problem because the seat was never granted.
