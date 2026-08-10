@@ -1,0 +1,20 @@
+services:
+  db:
+    image: postgres:16
+    container_name: ottodot-db
+    environment:
+      POSTGRES_USER: ottodot
+      POSTGRES_PASSWORD: ottodot
+      POSTGRES_DB: ottodot
+    ports:
+      - "5432:5432"
+    volumes:
+      - ottodot_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ottodot -d ottodot"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  ottodot_pgdata:
