@@ -2,8 +2,8 @@ import 'dotenv/config';
 
 import { sql } from 'drizzle-orm';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
-import { createDb, DEFAULT_DATABASE_URL } from './client';
-import { bookings, parents, paymentAttempts, students, trialClasses } from './schema';
+import { createDb, DEFAULT_DATABASE_URL } from './client.js';
+import { bookings, parents, paymentAttempts, students, trialClasses } from './schema.js';
 
 function now(): number {
   return Date.now();
