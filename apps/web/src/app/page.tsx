@@ -15,6 +15,7 @@ type TrialClass = {
   availableSeats: number;
 };
 
+
 const FORCE_OPTIONS = [
   { value: 'random', label: 'Random (as a real gateway would)' },
   { value: 'success', label: 'Force success' },
