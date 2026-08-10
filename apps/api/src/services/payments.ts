@@ -1,9 +1,9 @@
 import { and, eq, lt, sql } from 'drizzle-orm';
-import type { DB } from '../db/client';
-import { bookings, paymentAttempts, trialClasses } from '../db/schema';
-import type { BookingStatus } from '../db/schema';
-import { AppError, DuplicateBookingError, isUniqueConstraintError, SeatUnavailableError } from '../errors';
-import { getBooking, TRIAL_PRICE_CENTS } from './bookings';
+import type { DB } from '../db/client.js';
+import { bookings, paymentAttempts, trialClasses } from '../db/schema.js';
+import type { BookingStatus } from '../db/schema.js';
+import { AppError, DuplicateBookingError, isUniqueConstraintError, SeatUnavailableError } from '../errors.js';
+import { getBooking, TRIAL_PRICE_CENTS } from './bookings.js';
 
 export type PaymentOutcome = {
   result: 'success' | 'failure';

@@ -2,12 +2,12 @@ import cors from 'cors';
 import express, { type NextFunction, type Request, type Response } from 'express';
 import { randomUUID } from 'node:crypto';
 import { and, eq } from 'drizzle-orm';
-import type { DB } from './db/client';
-import { getDb } from './db/client';
-import { bookings, parents, paymentAttempts, students, trialClasses } from './db/schema';
-import { AppError, isUniqueConstraintError } from './errors';
-import { createBooking, getBooking } from './services/bookings';
-import { processPayment, type ForceResult } from './services/payments';
+import type { DB } from './db/client.js';
+import { getDb } from './db/client.js';
+import { bookings, parents, paymentAttempts, students, trialClasses } from './db/schema.js';
+import { AppError, isUniqueConstraintError } from './errors.js';
+import { createBooking, getBooking } from './services/bookings.js';
+import { processPayment, type ForceResult } from './services/payments.js';
 
 const FORCE_RESULTS: ForceResult[] = ['success', 'card_declined', 'insufficient_funds', 'network_error', 'random'];
 

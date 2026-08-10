@@ -1,5 +1,5 @@
 import type { Request, Response } from 'express';
-import { buildApp } from '../src/app';
+import { buildApp } from '../src/app.js';
 
 let app: ReturnType<typeof buildApp> | null = null;
 

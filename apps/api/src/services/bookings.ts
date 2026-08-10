@@ -1,7 +1,7 @@
 import { and, eq, sql } from 'drizzle-orm';
-import type { DB } from '../db/client';
-import { bookings, students, trialClasses } from '../db/schema';
-import { AppError, DuplicateBookingError } from '../errors';
+import type { DB } from '../db/client.js';
+import { bookings, students, trialClasses } from '../db/schema.js';
+import { AppError, DuplicateBookingError } from '../errors.js';
 
 export const TRIAL_PRICE_CENTS = 5000;
 
