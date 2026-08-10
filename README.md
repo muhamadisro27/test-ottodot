@@ -257,7 +257,7 @@ sequenceDiagram
     participant GW as Mock gateway
     participant DB as PostgreSQL
 
-    Parent->>UI: pick parent → child → class
+    Parent->>UI: pick parent, child, class
     UI->>API: POST /api/bookings {studentId, classId}
     API->>DB: student exists? class exists? active booking? class full?
     alt duplicate or full
@@ -273,10 +273,12 @@ sequenceDiagram
     GW-->>API: outcome
     API->>DB: record payment_attempt (idempotency_key unique)
     alt gateway failure
-        API->>DB: booking → payment_failed
+        API->>DB: booking set to payment_failed
         API-->>UI: { result: failure, bookingStatus: payment_failed }
     else success
-        API->>DB: BEGIN; UPDATE trial_classes<br/>SET confirmed_count = +1<br/>WHERE id=? AND confirmed_count < capacity; UPDATE booking → confirmed; COMMIT
+        API->>DB: BEGIN; conditional UPDATE trial_classes
+        API->>DB: increment confirmed_count only while below capacity
+        API->>DB: mark booking confirmed; COMMIT
         API-->>UI: { result: success, bookingStatus: confirmed }
     end
     UI->>Parent: show status; roster now includes child
@@ -294,18 +296,20 @@ sequenceDiagram
     participant API as Express API
     participant DB as PostgreSQL
 
-    Note over A,B: Class 2 has 3/4 confirmed → 1 seat left
+    Note over A,B: Class 2 has 3/4 confirmed - 1 seat left
     A->>API: create booking (pending_payment)
     B->>API: create booking (pending_payment)
     Note over A,B: NO seat is reserved at selection time
     B->>API: pay (arrives first)
-    API->>DB: BEGIN; conditional UPDATE<br/>confirmed_count 3→4 ✓; confirm B; COMMIT
+    API->>DB: BEGIN; conditional UPDATE trial_classes
+    API->>DB: confirmed_count 3 to 4; confirm B; COMMIT
     API-->>B: { bookingStatus: "confirmed" }
     A->>API: pay (arrives second)
-    API->>DB: BEGIN; conditional UPDATE ...<br/>WHERE confirmed_count < capacity → 0 rows
-    API->>DB: booking A → payment_failed (reason seat_unavailable)
+    API->>DB: BEGIN; conditional UPDATE trial_classes
+    API->>DB: WHERE below capacity: matches 0 rows
+    API->>DB: booking A set to payment_failed (reason seat_unavailable)
     API-->>A: { result: "success", reason: "seat_unavailable", bookingStatus: "payment_failed" }
-    Note over A,DB: PostgreSQL row-level lock serializes the two writers; the loser re-evaluates WHERE and loses → AT MOST ONE confirmed, guaranteed by the DB
+    Note over A,DB: PostgreSQL row-level lock serializes the two writers; the loser re-evaluates WHERE and loses: AT MOST ONE confirmed, guaranteed by the DB
 ```
 
 Key point: the gateway charge for user A can still *succeed* — but because the conditional UPDATE matched zero rows, the seat is **not** consumed and A's booking ends `payment_failed`. There is never a refund-or-reconcile problem because the seat was never granted.
