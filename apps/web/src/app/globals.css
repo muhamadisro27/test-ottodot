@@ -558,3 +558,97 @@ tr:last-child td {
   justify-content: center;
   font-size: 14px;
 }
+
+/* Success Confirmation Card & Receipt */
+.success-box {
+  text-align: center;
+  padding: 16px 8px;
+}
+
+.success-icon-circle {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  font-size: 36px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 20px;
+  box-shadow: 0 12px 28px rgba(16, 185, 129, 0.3);
+}
+
+.success-box h2 {
+  font-size: 26px;
+  color: #065f46;
+  margin: 8px 0;
+}
+
+.receipt-card {
+  background: #f0fdf4;
+  border: 2px solid #bbf7d0;
+  border-radius: 20px;
+  padding: 20px 24px;
+  margin: 24px 0;
+  text-align: left;
+}
+
+.receipt-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px dashed #cbd5e1;
+}
+
+.receipt-row:last-child {
+  border-bottom: none;
+}
+
+.receipt-label {
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.receipt-value {
+  font-weight: 700;
+  font-size: 15px;
+  color: #0f172a;
+}
+
+.action-group {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+@media (max-width: 640px) {
+  .action-group {
+    flex-direction: column;
+  }
+}
+
+.btn-secondary {
+  flex: 1;
+  padding: 16px 24px;
+  border: 2px solid #e2e8f0;
+  border-radius: 16px;
+  background: #ffffff;
+  color: #334155;
+  font-family: var(--font-display), sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.btn-secondary:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}

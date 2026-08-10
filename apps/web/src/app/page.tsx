@@ -16,6 +16,14 @@ type TrialClass = {
   availableSeats: number;
 };
 
+type ConfirmedReceipt = {
+  bookingId: number;
+  studentName: string;
+  className: string;
+  startsAt: string;
+  amount: string;
+};
+
 const FORCE_OPTIONS = [
   { value: 'random', label: 'Random (Gateway Simulation)' },
   { value: 'success', label: 'Force Success (Confirm Booking)' },
@@ -45,6 +53,7 @@ export default function HomePage() {
   const [classId, setClassId] = useState<number | ''>('');
   const [forceResult, setForceResult] = useState<string>('random');
   const [bookingId, setBookingId] = useState<number | null>(null);
+  const [receipt, setReceipt] = useState<ConfirmedReceipt | null>(null);
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
@@ -66,13 +75,22 @@ export default function HomePage() {
 
   const selectedParent = parents.find((p) => p.id === parentId);
   const selectedStudent = selectedParent?.students.find((s) => s.id === studentId);
+  const selectedClass = classes.find((c) => c.id === classId);
 
   // Stepper calculations
   const step1Done = Boolean(studentId);
-  const step3Active = Boolean(bookingId);
+  const step2Done = Boolean(bookingId || classId);
+  const isConfirmedState = Boolean(receipt);
+
+  function resetBooking() {
+    setBookingId(null);
+    setClassId('');
+    setReceipt(null);
+  }
 
   async function createBooking() {
     setBusy(true);
+    setReceipt(null);
     try {
       const res = await fetch('/api/bookings', {
         method: 'POST',
@@ -137,6 +155,14 @@ export default function HomePage() {
 
       const isConfirmed = body.bookingStatus === 'confirmed';
       if (isConfirmed) {
+        setReceipt({
+          bookingId,
+          studentName: selectedStudent?.name ?? 'Student',
+          className: `${selectedClass?.subject}: ${selectedClass?.topic}`,
+          startsAt: selectedClass ? new Date(selectedClass.startsAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : '',
+          amount: '$50.00',
+        });
+
         toast.success('Payment Successful!', {
           description: `Class spot is now confirmed for ${selectedStudent?.name ?? 'your child'}.`,
         });
@@ -188,147 +214,192 @@ export default function HomePage() {
             <div className="step-number">{step1Done ? '✓' : '1'}</div>
             <div className="step-label">1. Child Info</div>
           </div>
-          <div className={`step-item ${step1Done && !step3Active ? 'active' : step3Active ? 'completed' : ''}`}>
-            <div className="step-number">{step3Active ? '✓' : '2'}</div>
+          <div className={`step-item ${step2Done ? 'completed' : step1Done ? 'active' : ''}`}>
+            <div className="step-number">{step2Done ? '✓' : '2'}</div>
             <div className="step-label">2. Select Class</div>
           </div>
-          <div className={`step-item ${step3Active ? 'active' : ''}`}>
-            <div className="step-number">3</div>
+          <div className={`step-item ${isConfirmedState ? 'completed' : bookingId ? 'active' : ''}`}>
+            <div className="step-number">{isConfirmedState ? '✓' : '3'}</div>
             <div className="step-label">3. Confirm & Pay</div>
           </div>
         </div>
 
         <div className="card">
-          <h3 className="card-title">
-            <span>Step 1: Select Parent & Child</span>
-          </h3>
+          {receipt !== null ? (
+            /* Success State UI Card */
+            <div className="success-box">
+              <div className="success-icon-circle">✓</div>
+              <span className="badge ok">Booking Confirmed</span>
+              <h2>You&apos;re All Set!</h2>
+              <p className="muted">Your trial class spot has been successfully reserved & confirmed.</p>
 
-          <div className="form-grid">
-            <div className="field-group">
-              <label>Parent Profile</label>
-              <select
-                value={parentId}
-                onChange={(e) => {
-                  setParentId(Number(e.target.value));
-                  setStudentId('');
-                  setBookingId(null);
-                }}
-              >
-                <option value="">Choose parent profile…</option>
-                {parents.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}{p.email ? ` (${p.email})` : ''}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="field-group">
-              <label>Child Student</label>
-              <select
-                value={studentId}
-                onChange={(e) => {
-                  setStudentId(Number(e.target.value));
-                  setBookingId(null);
-                }}
-                disabled={!selectedParent}
-              >
-                <option value="">Choose child…</option>
-                {selectedParent?.students.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name} (Grade {s.grade})
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <h3 className="card-title" style={{ marginTop: 28 }}>
-            <span>Step 2: Choose Available Trial Class</span>
-          </h3>
-
-          <div className="classes-grid">
-            {classes.map((c) => {
-              const full = c.availableSeats <= 0;
-              const isSelected = classId === c.id;
-              const badgeText = getSubjectBadge(c.subject);
-              const subjectClass = getSubjectClass(c.subject);
-              const fillPercentage = (c.confirmedCount / c.capacity) * 100;
-
-              return (
-                <div
-                  key={c.id}
-                  className={`class-card ${isSelected ? 'selected' : ''} ${full ? 'full' : ''}`}
-                  onClick={() => {
-                    if (!full) {
-                      setClassId(c.id);
-                      setBookingId(null);
-                    }
-                  }}
-                >
-                  <div className="class-info">
-                    <div className={`subject-icon ${subjectClass}`} style={{ fontSize: 13, fontWeight: 800, color: '#334155' }}>
-                      {badgeText}
-                    </div>
-                    <div className="class-details">
-                      <h4>
-                        {c.subject}: {c.topic}
-                      </h4>
-                      <div className="time">
-                        {new Date(c.startsAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="seat-status">
-                    {full ? (
-                      <span className="badge bad">Class Full</span>
-                    ) : c.availableSeats === 1 ? (
-                      <span className="badge warn">1 seat left</span>
-                    ) : (
-                      <span className="badge ok">{c.availableSeats} seats open</span>
-                    )}
-
-                    <div className="capacity-bar">
-                      <div
-                        className={`capacity-fill ${full ? 'full' : c.availableSeats === 1 ? 'warn' : ''}`}
-                        style={{ width: `${fillPercentage}%` }}
-                      />
-                    </div>
-                  </div>
+              <div className="receipt-card">
+                <div className="receipt-row">
+                  <span className="receipt-label">Student</span>
+                  <span className="receipt-value">{receipt.studentName}</span>
                 </div>
-              );
-            })}
-          </div>
-
-          {bookingId === null ? (
-            <button className="btn-primary" onClick={createBooking} disabled={!studentId || !classId || busy}>
-              {busy ? 'Reserving Spot...' : 'Reserve Trial Spot ($50.00)'}
-            </button>
-          ) : (
-            <div className="payment-box">
-              <h3>
-                <span>Step 3: Confirm Payment for Booking #{bookingId}</span>
-              </h3>
-              <p className="muted" style={{ marginTop: 0, marginBottom: 12 }}>
-                Mock payment simulator — choose a gateway outcome to test business logic:
-              </p>
-
-              <div className="field-group">
-                <label>Gateway Result Override</label>
-                <select value={forceResult} onChange={(e) => setForceResult(e.target.value)}>
-                  {FORCE_OPTIONS.map((o) => (
-                    <option key={o.value} value={o.value}>
-                      {o.label}
-                    </option>
-                  ))}
-                </select>
+                <div className="receipt-row">
+                  <span className="receipt-label">Trial Class</span>
+                  <span className="receipt-value">{receipt.className}</span>
+                </div>
+                <div className="receipt-row">
+                  <span className="receipt-label">Date & Time</span>
+                  <span className="receipt-value">{receipt.startsAt}</span>
+                </div>
+                <div className="receipt-row">
+                  <span className="receipt-label">Booking Reference</span>
+                  <span className="receipt-value">#{receipt.bookingId}</span>
+                </div>
+                <div className="receipt-row">
+                  <span className="receipt-label">Amount Paid</span>
+                  <span className="receipt-value">{receipt.amount}</span>
+                </div>
               </div>
 
-              <button className="btn-primary" onClick={pay} disabled={busy} style={{ marginTop: 16 }}>
-                {busy ? 'Processing Payment...' : `Pay $50.00 Now (Booking #${bookingId})`}
-              </button>
+              <div className="action-group">
+                <button className="btn-primary" style={{ marginTop: 0 }} onClick={resetBooking}>
+                  Book Another Class
+                </button>
+                <Link href="/roster" className="btn-secondary">
+                  View Teacher Roster →
+                </Link>
+              </div>
             </div>
+          ) : (
+            /* Standard Booking Form UI */
+            <>
+              <h3 className="card-title">
+                <span>Step 1: Select Parent & Child</span>
+              </h3>
+
+              <div className="form-grid">
+                <div className="field-group">
+                  <label>Parent Profile</label>
+                  <select
+                    value={parentId}
+                    onChange={(e) => {
+                      setParentId(Number(e.target.value));
+                      setStudentId('');
+                      setBookingId(null);
+                    }}
+                  >
+                    <option value="">Choose parent profile…</option>
+                    {parents.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}{p.email ? ` (${p.email})` : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="field-group">
+                  <label>Child Student</label>
+                  <select
+                    value={studentId}
+                    onChange={(e) => {
+                      setStudentId(Number(e.target.value));
+                      setBookingId(null);
+                    }}
+                    disabled={!selectedParent}
+                  >
+                    <option value="">Choose child…</option>
+                    {selectedParent?.students.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name} (Grade {s.grade})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <h3 className="card-title" style={{ marginTop: 28 }}>
+                <span>Step 2: Choose Available Trial Class</span>
+              </h3>
+
+              <div className="classes-grid">
+                {classes.map((c) => {
+                  const full = c.availableSeats <= 0;
+                  const isSelected = classId === c.id;
+                  const badgeText = getSubjectBadge(c.subject);
+                  const subjectClass = getSubjectClass(c.subject);
+                  const fillPercentage = (c.confirmedCount / c.capacity) * 100;
+
+                  return (
+                    <div
+                      key={c.id}
+                      className={`class-card ${isSelected ? 'selected' : ''} ${full ? 'full' : ''}`}
+                      onClick={() => {
+                        if (!full) {
+                          setClassId(c.id);
+                          setBookingId(null);
+                        }
+                      }}
+                    >
+                      <div className="class-info">
+                        <div className={`subject-icon ${subjectClass}`} style={{ fontSize: 13, fontWeight: 800, color: '#334155' }}>
+                          {badgeText}
+                        </div>
+                        <div className="class-details">
+                          <h4>
+                            {c.subject}: {c.topic}
+                          </h4>
+                          <div className="time">
+                            {new Date(c.startsAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="seat-status">
+                        {full ? (
+                          <span className="badge bad">Class Full</span>
+                        ) : c.availableSeats === 1 ? (
+                          <span className="badge warn">1 seat left</span>
+                        ) : (
+                          <span className="badge ok">{c.availableSeats} seats open</span>
+                        )}
+
+                        <div className="capacity-bar">
+                          <div
+                            className={`capacity-fill ${full ? 'full' : c.availableSeats === 1 ? 'warn' : ''}`}
+                            style={{ width: `${fillPercentage}%` }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {bookingId === null ? (
+                <button className="btn-primary" onClick={createBooking} disabled={!studentId || !classId || busy}>
+                  {busy ? 'Reserving Spot...' : 'Reserve Trial Spot ($50.00)'}
+                </button>
+              ) : (
+                <div className="payment-box">
+                  <h3>
+                    <span>Step 3: Confirm Payment for Booking #{bookingId}</span>
+                  </h3>
+                  <p className="muted" style={{ marginTop: 0, marginBottom: 12 }}>
+                    Mock payment simulator — choose a gateway outcome to test business logic:
+                  </p>
+
+                  <div className="field-group">
+                    <label>Gateway Result Override</label>
+                    <select value={forceResult} onChange={(e) => setForceResult(e.target.value)}>
+                      {FORCE_OPTIONS.map((o) => (
+                        <option key={o.value} value={o.value}>
+                          {o.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <button className="btn-primary" onClick={pay} disabled={busy} style={{ marginTop: 16 }}>
+                    {busy ? 'Processing Payment...' : `Pay $50.00 Now (Booking #${bookingId})`}
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </div>
       </main>
